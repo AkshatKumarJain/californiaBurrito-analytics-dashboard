@@ -1,0 +1,20 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Backend for dashboard",
+  "main": "app.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node app.js",
+    "dev": "nodemon --exec ts-node app.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Akshat Jain",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
