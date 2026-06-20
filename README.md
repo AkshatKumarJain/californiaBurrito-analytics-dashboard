@@ -36,11 +36,59 @@ Business analytics dashboard built for the software developer intern assessment.
 
 ## Architecture Decisions
 
-The dashboard does not read the Excel file on page load. Large-file handling is isolated in a one-time ETL command that streams rows from the workbook, normalizes values, computes `line_revenue = price * quantity`, and inserts records into MySQL in batches. The API then serves pre-cleaned data through aggregate SQL queries.
+1. Choice of Database: Why MySQL / TiDB?
+Efficient Aggregations: The dashboard relies heavily on complex analytical functions (SUM, COUNT, AVG, GROUP BY). Relational engines optimize executive rollups far better than document stores like MongoDB.
 
-This approach is safer for Render/free-tier style deployments because the web server handles lightweight JSON requests while MySQL performs indexed filtering and grouping. Redis is used as an optional cache layer, but every cached response still falls back to a short in-memory cache if Redis is unavailable. That means the dashboard keeps working even when the cache service is cold, restarting, or temporarily unreachable.
+Deterministic Indexing: High-cardinality columns (e.g., date ranges, store outlets, payment types) use B-Tree indexing strategies to eliminate full-table scans.
 
-The main table is `sales_line_items`, one row per Excel line item. Important indexes are placed on `order_datetime` plus common dashboard dimensions such as outlet, brand, category, order type, settlement, and bill number.
+ACID Compliance: Ensures absolute financial data consistency across calculated revenues, eliminating rounding errors or drifting figures during concurrent updates.
+
+TiDB Compatibility: Allows seamless distributed scaling while maintaining complete MySQL wire-protocol compatibility.
+
+2. High-Volume Ingestion: Streaming ETL Pipeline
+Memory Bounds: Loading a 300,000-row Excel sheet directly into system memory will crash standard server instances (such as Render’s free tier). The pipeline implements a chunked memory stream reader that reads the file row-by-row.
+
+Batched Inserts: Database driver roundtrips are reduced by batching individual rows into parameterized multi-row queries of 5,000 rows per transaction block, reducing import times from minutes to seconds.
+
+Data Transformation: Computes operational derivations at rest (e.g., line_revenue = price * quantity), moving computation away from the frontend application layout.
+
+3. Dual-Layer Caching Strategy
+To safeguard the system against connection drops or excessive query costs, a multi-tier caching system handles incoming traffic:
+
+Primary Layer (Redis): Caches API outputs for rapid responses across distributed instances.
+
+Secondary Layer (In-Memory Fallback): If the external Redis service goes cold, restarts, or hits rate limits, the API seamlessly switches to a localized, short-lived in-memory cache loop to prevent database overloading.
+
+ Database Schema & Indexing Strategy
+The data core utilizes a highly normalized schema centered around a central operational fact table:
+
+SQL
+CREATE TABLE sales_line_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    bill_number VARCHAR(50) NOT NULL,
+    order_datetime DATETIME NOT NULL,
+    outlet_name VARCHAR(100) NOT NULL,
+    brand_name VARCHAR(100) NOT NULL,
+    category_name VARCHAR(100) NOT NULL,
+    item_name VARCHAR(150) NOT NULL,
+    order_type VARCHAR(50) NOT NULL,
+    settlement_type VARCHAR(50) NOT NULL,
+    quantity INT NOT NULL,
+    item_price DECIMAL(10, 2) NOT NULL,
+    line_revenue DECIMAL(12, 2) NOT NULL
+);
+Performance Optimization Index Profile
+To guarantee sub-second execution speeds when applying filters on the frontend, the following target indexes are built into the migration layer:
+
+SQL
+-- Date filtering optimization
+CREATE INDEX idx_sales_datetime ON sales_line_items(order_datetime);
+
+-- Composite operational coverage index for faceted sidebar searches
+CREATE INDEX idx_dashboard_filters ON sales_line_items(outlet_name, brand_name, category_name, order_type);
+
+-- Text search index for specific item identification queries
+CREATE INDEX idx_item_search ON sales_line_items(item_name);
 
 ## Backend Setup
 
