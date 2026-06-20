@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: california-burrito-analytics-api
+    runtime: node
+    plan: free
+    rootDir: Backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: CACHE_TTL_SECONDS
+        value: 60
+      - key: CACHE_PROVIDER
+        value: auto
+      - key: AUTH_REQUIRED
+        value: false
+      - key: AUTH_ALLOW_REGISTRATION
+        value: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: california-burrito-cache
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: keyvalue
+    name: california-burrito-cache
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+  - type: web
+    name: california-burrito-analytics-dashboard
+    runtime: static
+    plan: free
+    rootDir: Frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
