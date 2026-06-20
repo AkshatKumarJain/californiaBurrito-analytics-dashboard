@@ -36,32 +36,35 @@ Business analytics dashboard built for the software developer intern assessment.
 
 ## Architecture Decisions
 
-1. Choice of Database: Why MySQL / TiDB?
-Efficient Aggregations: The dashboard relies heavily on complex analytical functions (SUM, COUNT, AVG, GROUP BY). Relational engines optimize executive rollups far better than document stores like MongoDB.
+### 1. Choice of Database: Why MySQL / TiDB?
 
-Deterministic Indexing: High-cardinality columns (e.g., date ranges, store outlets, payment types) use B-Tree indexing strategies to eliminate full-table scans.
+- Efficient Aggregations: The dashboard relies heavily on complex analytical functions (SUM, COUNT, AVG, GROUP BY). Relational engines optimize executive rollups far better than document stores like MongoDB.
 
-ACID Compliance: Ensures absolute financial data consistency across calculated revenues, eliminating rounding errors or drifting figures during concurrent updates.
+- Deterministic Indexing: High-cardinality columns (e.g., date ranges, store outlets, payment types) use B-Tree indexing strategies to eliminate full-table scans.
 
-TiDB Compatibility: Allows seamless distributed scaling while maintaining complete MySQL wire-protocol compatibility.
+- ACID Compliance: Ensures absolute financial data consistency across calculated revenues, eliminating rounding errors or drifting figures during concurrent updates.
 
-2. High-Volume Ingestion: Streaming ETL Pipeline
-Memory Bounds: Loading a 300,000-row Excel sheet directly into system memory will crash standard server instances (such as Render’s free tier). The pipeline implements a chunked memory stream reader that reads the file row-by-row.
+- TiDB Compatibility: Allows seamless distributed scaling while maintaining complete MySQL wire-protocol compatibility.
 
-Batched Inserts: Database driver roundtrips are reduced by batching individual rows into parameterized multi-row queries of 5,000 rows per transaction block, reducing import times from minutes to seconds.
+### 2. High-Volume Ingestion: Streaming ETL Pipeline
 
-Data Transformation: Computes operational derivations at rest (e.g., line_revenue = price * quantity), moving computation away from the frontend application layout.
+- Memory Bounds: Loading a 300,000-row Excel sheet directly into system memory will crash standard server instances (such as Render’s free tier). The pipeline implements a chunked memory stream reader that reads the file row-by-row.
 
-3. Dual-Layer Caching Strategy
-To safeguard the system against connection drops or excessive query costs, a multi-tier caching system handles incoming traffic:
+- Batched Inserts: Database driver roundtrips are reduced by batching individual rows into parameterized multi-row queries of 5,000 rows per transaction block, reducing import times from minutes to seconds.
 
-Primary Layer (Redis): Caches API outputs for rapid responses across distributed instances.
+- Data Transformation: Computes operational derivations at rest (e.g., line_revenue = price * quantity), moving computation away from the frontend application layout.
 
-Secondary Layer (In-Memory Fallback): If the external Redis service goes cold, restarts, or hits rate limits, the API seamlessly switches to a localized, short-lived in-memory cache loop to prevent database overloading.
+### 3. Dual-Layer Caching Strategy
+- To safeguard the system against connection drops or excessive query costs, a multi-tier caching system handles incoming traffic:
 
- Database Schema & Indexing Strategy
+- Primary Layer (Redis): Caches API outputs for rapid responses across distributed instances.
+
+- Secondary Layer (In-Memory Fallback): If the external Redis service goes cold, restarts, or hits rate limits, the API seamlessly switches to a localized, short-lived in-memory cache loop to prevent database overloading.
+
+### 4. Database Schema & Indexing Strategy
 The data core utilizes a highly normalized schema centered around a central operational fact table:
 
+```
 SQL
 CREATE TABLE sales_line_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -77,9 +80,11 @@ CREATE TABLE sales_line_items (
     item_price DECIMAL(10, 2) NOT NULL,
     line_revenue DECIMAL(12, 2) NOT NULL
 );
-Performance Optimization Index Profile
+```
+### Performance Optimization Index Profile
 To guarantee sub-second execution speeds when applying filters on the frontend, the following target indexes are built into the migration layer:
 
+```
 SQL
 -- Date filtering optimization
 CREATE INDEX idx_sales_datetime ON sales_line_items(order_datetime);
@@ -89,6 +94,7 @@ CREATE INDEX idx_dashboard_filters ON sales_line_items(outlet_name, brand_name, 
 
 -- Text search index for specific item identification queries
 CREATE INDEX idx_item_search ON sales_line_items(item_name);
+```
 
 ## Backend Setup
 
