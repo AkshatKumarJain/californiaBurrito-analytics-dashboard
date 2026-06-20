@@ -17,6 +17,7 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api",
   timeout: 20_000,
 });
+console.log(import.meta.env.VITE_API_BASE_URL)
 
 api.interceptors.request.use((config) => {
   const token = window.localStorage.getItem("auth_token");

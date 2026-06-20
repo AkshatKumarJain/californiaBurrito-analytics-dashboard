@@ -11,11 +11,13 @@ import { analyticsRouter } from "./routes/analytics.routes";
 import { healthRouter } from "./routes/health.routes";
 
 function isAllowedOrigin(origin: string | undefined): boolean {
+  console.log("CORS ORIGINS:", env.corsOrigins);
   if (!origin) {
     return true;
   }
 
   return env.corsOrigins.includes("*") || env.corsOrigins.includes(origin);
+  
 }
 
 export function createApp() {
@@ -26,6 +28,9 @@ export function createApp() {
   app.use(
     cors({
       origin(origin, callback) {
+        console.log("Incoming Origin:", origin);
+      console.log("Allowed Origins:", env.corsOrigins);
+
         callback(null, isAllowedOrigin(origin));
       },
       credentials: true,
