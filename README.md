@@ -9,7 +9,15 @@ Business analytics dashboard built for the software developer intern assessment.
 - Cache: Redis / Render Key Value with memory fallback
 - ETL: streaming Excel import with batched inserts
 - Frontend: React, Vite, Tailwind CSS, Recharts, Lucide icons
-- Deployment target: Render for API/static frontend, with a MySQL-compatible hosted database
+- Deployment target: Render for API/static frontend, with a MySQL-compatible hosted database(TiDB)
+
+ ## why MYSQL was preferred here?
+
+ - Efficient Aggregations – MySQL performs GROUP BY, COUNT, SUM, and reporting queries efficiently, which are heavily used in analytics dashboards.
+ -Optimized Indexing – Indexes on filter columns (date, category, region, etc.) enable fast filtering and searching across large datasets.
+ -Strong Relational Support – The dataset contains structured relationships between entities such as orders, products, and customers,       making a relational database a natural fit.
+ -High Data Consistency – ACID-compliant transactions ensure accurate and reliable analytical results even with concurrent data             operations.
+ -Lower Complexity for the Use Case – MongoDB's schema flexibility and PostgreSQL's advanced features were unnecessary for a structured     300k-row analytics workload, making MySQL the most practical choice.
 
 ## Features
 
