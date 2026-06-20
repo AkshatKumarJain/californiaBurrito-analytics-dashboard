@@ -1,3 +1,3 @@
-const message: string = "Hello TypeScript";
+import { startServer } from "./src/server";
 
-console.log(message);
+void startServer();
