@@ -1,6 +1,6 @@
 # California Burrito Analytics Dashboard
 
-Business analytics dashboard built for the software developer intern assessment. The app turns the provided ~300,000-row Excel file into a responsive sales dashboard with a Node.js TypeScript API, MySQL storage, Redis caching, and a React + Tailwind frontend.
+Business analytics dashboard turns the provided ~300,000-row Excel file into a responsive sales dashboard with a Node.js TypeScript API, MySQL storage, Redis caching, and a React + Tailwind frontend.
 
 ## Tech Stack
 
